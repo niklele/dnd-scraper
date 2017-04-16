@@ -65,18 +65,12 @@ def monsterPage(url)
     cha = stats.xpath('//td[6]/div').text
     puts "str: #{str} dex: #{dex} con: #{con} int: #{int} wis: #{wis} cha: #{cha}"
 
-    proficiency = info.xpath('//div[4]/div[1]/span').text
-    saving_throws = info.xpath('//div[4]/div[2]/span').text
-    skills = info.xpath('//div[4]/div[3]/span').text
-    senses = info.xpath('//div[4]/div[4]/span').text
-    languages = info.xpath('//div[4]/div[5]/span').text
-    puts "proficiency: #{proficiency} saving_throws: #{saving_throws} skills: #{skills} senses: #{senses} languages: #{languages}"
-
-# '//*[@id="app"]/div/div[3]/div/div/div/div[1]/div[4]/div[5]/span/span/span[1]'
-# CR is getting messed up b/c some monsters dont have saving throws
-    cr = info.xpath('//div[4]/div[6]/span/span/span[1]').text
-    xp = info.xpath('//div[4]/div[6]/span/span/span[3]').text
-    puts "cr: #{cr} xp: #{xp}"
+    # TODO spit details into each category if it exists:
+    # proficiency, saving_throws, skills, senses, languages, cr, xp
+    detailTitleXPath = '//*[@id="app"]/div/div[3]/div/div/div/div[1]/div[4]/div/h5'
+    detailDescriptionXPath = '//*[@id="app"]/div/div[3]/div/div/div/div[1]/div[4]/div/span'
+    details = textBlock(monster, detailTitleXPath, detailDescriptionXPath)
+    puts "details: #{details}"
 
     specialTitleXPath = '//*[@id="app"]/div/div[3]/div/div/div/div[1]/div[5]/p/em/strong'
     specialDescriptionXPath = '//*[@id="app"]/div/div[3]/div/div/div/div[1]/div[5]/p/span'
