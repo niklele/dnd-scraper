@@ -66,12 +66,18 @@ def monsterPage(url, verbose=false)
     data['hp_dice'] = info.xpath('//div[2]/div[2]/span').text.split(/[()]/)[1].delete(' ')
 
     stats = info.xpath('//div[3]/table/tbody/tr')
-    data['str'] = stats.xpath('//td[1]/div').text
-    data['dex'] = stats.xpath('//td[2]/div').text
-    data['con'] = stats.xpath('//td[3]/div').text
-    data['int'] = stats.xpath('//td[4]/div').text
-    data['wis'] = stats.xpath('//td[5]/div').text
-    data['cha'] = stats.xpath('//td[6]/div').text
+    data['str'] = stats.xpath('//td[1]/div').text.split(/[() ]/)[0]
+    data['str_mod'] = stats.xpath('//td[1]/div').text.split(/[() ]/)[2]
+    data['dex'] = stats.xpath('//td[2]/div').text.split(/[() ]/)[0]
+    data['dex_mod'] = stats.xpath('//td[2]/div').text.split(/[() ]/)[2]
+    data['con'] = stats.xpath('//td[3]/div').text.split(/[() ]/)[0]
+    data['con_mod'] = stats.xpath('//td[3]/div').text.split(/[() ]/)[2]
+    data['int'] = stats.xpath('//td[4]/div').text.split(/[() ]/)[0]
+    data['int_mod'] = stats.xpath('//td[4]/div').text.split(/[() ]/)[2]
+    data['wis'] = stats.xpath('//td[5]/div').text.split(/[() ]/)[0]
+    data['wis_mod'] = stats.xpath('//td[5]/div').text.split(/[() ]/)[2]
+    data['cha'] = stats.xpath('//td[6]/div').text.split(/[() ]/)[0]
+    data['cha_mod'] = stats.xpath('//td[6]/div').text.split(/[() ]/)[2]
 
     detailTitleXPath = '//*[@id="app"]/div/div[3]/div/div/div/div[1]/div[4]/div/h5'
     detailDescriptionXPath = '//*[@id="app"]/div/div[3]/div/div/div/div[1]/div[4]/div/span'
@@ -88,16 +94,16 @@ def monsterPage(url, verbose=false)
     # eg. to support looking for a specific action
     specialTitleXPath = '//*[@id="app"]/div/div[3]/div/div/div/div[1]/div[5]/p/em/strong'
     specialDescriptionXPath = '//*[@id="app"]/div/div[3]/div/div/div/div[1]/div[5]/p/span'
-    data['special'] = textBlock(monster, specialTitleXPath, specialDescriptionXPath)
+    data['special'] = textBlock(monster, specialTitleXPath, specialDescriptionXPath).gsub(/[\r\n]/,"")
 
     actionsTitleXPath = '//*[@id="app"]/div/div[3]/div/div/div/div[3]/div/div[2]/p/em/strong'
     actionsDescriptionXPath = '//*[@id="app"]/div/div[3]/div/div/div/div[3]/div/div[2]/p/span'
-    data['actions'] = textBlock(monster, actionsTitleXPath, actionsDescriptionXPath)
+    data['actions'] = textBlock(monster, actionsTitleXPath, actionsDescriptionXPath).gsub(/[\r\n]/,"")
 
-    data['legendary_actions_text'] = monster.xpath('//*[@id="app"]/div/div[3]/div/div/div/div[3]/div/div[3]/p[1]').text
+    data['legendary_actions_text'] = monster.xpath('//*[@id="app"]/div/div[3]/div/div/div/div[3]/div/div[3]/p[1]').text.gsub(/[\r\n]/,"")
     legendaryActionsTitleXPath = '//*[@id="app"]/div/div[3]/div/div/div/div[3]/div/div[3]/p/em/strong'
     legendaryActionsDescriptionXPath = '//*[@id="app"]/div/div[3]/div/div/div/div[3]/div/div[3]/p/span'
-    data['legendary_actions'] = textBlock(monster, legendaryActionsTitleXPath, legendaryActionsDescriptionXPath)
+    data['legendary_actions'] = textBlock(monster, legendaryActionsTitleXPath, legendaryActionsDescriptionXPath).gsub(/[\r\n]/,"")
 
     if verbose
         puts data
@@ -112,6 +118,10 @@ end
 
 # monsterPage('http://www.orcpub.com/dungeons-and-dragons/5th-edition/monsters/gnome--deep-svirfneblin', true)
 
+# monsterPage('http://www.orcpub.com/dungeons-and-dragons/5th-edition/monsters/veteran', true)
+
+# monsterPage('http://www.orcpub.com/dungeons-and-dragons/5th-edition/monsters/tribal-warrior', true)
+
 def scrapeMonsters(save=false, verbose=false)
     pages = monsterPages(save, verbose)
 
@@ -120,19 +130,20 @@ def scrapeMonsters(save=false, verbose=false)
     end
 
     CSV.open('monsters.csv', 'w') do |csv|
-        pages.each do |page|
+        pages.each_with_index do |page, index|
 
             # rate limiting
             sleep(1)
 
-            m = monsterPage(page, verbose)
-
             if verbose
                 puts "\n\n"
             end
+            puts "#{index+1}/#{pages.length}"
+
+            m = monsterPage(page, verbose)
 
             if save
-                csv << [m['title'], m['size'], m['type'], m['alignment'], m['ac'], m['speed'], m['hp_avg'], m['hp_dice'], m['str'], m['dex'], m['con'], m['int'], m['wis'], m['cha'], m['proficiency'], m['saving_throws'], m['skills'], m['senses'], m['languages'], m['cr'], m['xp'], m['special'], m['actions'], m['legendary_actions_text'], m['legendary_actions']]
+                csv << [m['title'], m['size'], m['type'], m['alignment'], m['ac'], m['speed'], m['hp_avg'], m['hp_dice'], m['str'], m['str_mod'], m['dex'], m['dex_mod'], m['con'], m['con_mod'], m['int'], m['int_mod'], m['wis'], m['wis_mod'], m['cha'], m['cha_mod'], m['proficiency'], m['saving_throws'], m['skills'], m['senses'], m['languages'], m['cr'], m['xp'], m['special'], m['actions'], m['legendary_actions_text'], m['legendary_actions']]
             end
         end
     end
