@@ -4,7 +4,7 @@ require 'JSON'
 require 'Pry'
 require 'csv'
 
-def monsterPages()
+def monsterPages(save=false, verbose=false)
     monstersHtml = HTTParty.get('http://www.orcpub.com/dungeons-and-dragons/5th-edition/monsters')
     monsters = Nokogiri::HTML(monstersHtml)
 
@@ -15,15 +15,18 @@ def monsterPages()
 
     CSV.open('monster-pages.csv', 'w') do |csv|
         elems.each do |e|
-            # puts "#{e}\n\n"
-
             childName = e['href'].split('/').last
             childLink = "http://www.orcpub.com" + e['href']
 
             # print and save
-            puts "#{childName}\t#{childLink}\n"
-            csv << [childName, childLink]
-            pages.push([childName, childLink])
+            if verbose
+                puts "#{childName}\t#{childLink}\n"
+            end
+            if save
+                csv << [childName, childLink]
+            end
+            # pages.push([childName, childLink])
+            pages.push(childLink)
         end
     end
 
@@ -44,7 +47,7 @@ def textBlock(monster, titleXPath, descriptionXPath)
     return titles.zip(descriptions).join(" ")
 end
 
-def monsterPage(url)
+def monsterPage(url, verbose=false)
     data = Hash.new("")
     monsterHtml = HTTParty.get(url)
     monster = Nokogiri::HTML(monsterHtml).xpath('//*[@id="app"]/div/div[3]')
@@ -91,17 +94,48 @@ def monsterPage(url)
     actionsDescriptionXPath = '//*[@id="app"]/div/div[3]/div/div/div/div[3]/div/div[2]/p/span'
     data['actions'] = textBlock(monster, actionsTitleXPath, actionsDescriptionXPath)
 
-    data['legendaryActionsText'] = monster.xpath('//*[@id="app"]/div/div[3]/div/div/div/div[3]/div/div[3]/p[1]').text
+    data['legendary_actions_text'] = monster.xpath('//*[@id="app"]/div/div[3]/div/div/div/div[3]/div/div[3]/p[1]').text
     legendaryActionsTitleXPath = '//*[@id="app"]/div/div[3]/div/div/div/div[3]/div/div[3]/p/em/strong'
     legendaryActionsDescriptionXPath = '//*[@id="app"]/div/div[3]/div/div/div/div[3]/div/div[3]/p/span'
-    data['legendaryActions'] = textBlock(monster, legendaryActionsTitleXPath, legendaryActionsDescriptionXPath)
+    data['legendary_actions'] = textBlock(monster, legendaryActionsTitleXPath, legendaryActionsDescriptionXPath)
 
-    puts data
+    if verbose
+        puts data
+    end
 
+    return data
 end
 
-monsterPage('http://www.orcpub.com/dungeons-and-dragons/5th-edition/monsters/hobgoblin')
+# monsterPage('http://www.orcpub.com/dungeons-and-dragons/5th-edition/monsters/hobgoblin', true)
 
-monsterPage('http://www.orcpub.com/dungeons-and-dragons/5th-edition/monsters/aboleth')
+# monsterPage('http://www.orcpub.com/dungeons-and-dragons/5th-edition/monsters/aboleth', true)
 
-# monsterPage('http://www.orcpub.com/dungeons-and-dragons/5th-edition/monsters/gnome--deep-svirfneblin')
+# monsterPage('http://www.orcpub.com/dungeons-and-dragons/5th-edition/monsters/gnome--deep-svirfneblin', true)
+
+def scrapeMonsters(save=false, verbose=false)
+    pages = monsterPages(save, verbose)
+
+    if verbose
+        puts "\n\n"
+    end
+
+    CSV.open('monsters.csv', 'w') do |csv|
+        pages.each do |page|
+
+            # rate limiting
+            sleep(1)
+
+            m = monsterPage(page, verbose)
+
+            if verbose
+                puts "\n\n"
+            end
+
+            if save
+                csv << [m['title'], m['size'], m['type'], m['alignment'], m['ac'], m['speed'], m['hp_avg'], m['hp_dice'], m['str'], m['dex'], m['con'], m['int'], m['wis'], m['cha'], m['proficiency'], m['saving_throws'], m['skills'], m['senses'], m['languages'], m['cr'], m['xp'], m['special'], m['actions'], m['legendary_actions_text'], m['legendary_actions']]
+            end
+        end
+    end
+end
+
+scrapeMonsters(true, true)
