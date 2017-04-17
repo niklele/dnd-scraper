@@ -59,24 +59,22 @@ def spellPages(save=false, verbose=false)
     return pages
 end
 
-# spellPages(true, true)
-
-def textBlockHash(monster, titleXPath, descriptionXPath)
-    titles = monster.xpath(titleXPath).map { |e| e.text }
-    descriptions = monster.xpath(descriptionXPath).map { |e| e.text }
+def textBlockHash(root, titleXPath, descriptionXPath)
+    titles = root.xpath(titleXPath).map { |e| e.text }
+    descriptions = root.xpath(descriptionXPath).map { |e| e.text }
     data = Hash[[titles, descriptions].transpose]
-    data.default = ""
+    data.default = ''
     return data
 end
 
-def textBlock(monster, titleXPath, descriptionXPath)
-    titles = monster.xpath(titleXPath).map { |e| e.text }
-    descriptions = monster.xpath(descriptionXPath).map { |e| e.text }
-    return titles.zip(descriptions).join(" ")
+def textBlock(root, titleXPath, descriptionXPath)
+    titles = root.xpath(titleXPath).map { |e| e.text }
+    descriptions = root.xpath(descriptionXPath).map { |e| e.text }
+    return titles.zip(descriptions).join(' ')
 end
 
 def monsterPage(url, verbose=false)
-    data = Hash.new("")
+    data = Hash.new('')
     monsterHtml = HTTParty.get(url)
     monster = Nokogiri::HTML(monsterHtml).xpath('//*[@id="app"]/div/div[3]')
 
@@ -122,16 +120,46 @@ def monsterPage(url, verbose=false)
     # eg. to support looking for a specific action
     specialTitleXPath = '//*[@id="app"]/div/div[3]/div/div/div/div[1]/div[5]/p/em/strong'
     specialDescriptionXPath = '//*[@id="app"]/div/div[3]/div/div/div/div[1]/div[5]/p/span'
-    data['special'] = textBlock(monster, specialTitleXPath, specialDescriptionXPath).gsub(/[\r\n]/,"")
+    data['special'] = textBlock(monster, specialTitleXPath, specialDescriptionXPath).gsub(/[\r\n]/,'')
 
     actionsTitleXPath = '//*[@id="app"]/div/div[3]/div/div/div/div[3]/div/div[2]/p/em/strong'
     actionsDescriptionXPath = '//*[@id="app"]/div/div[3]/div/div/div/div[3]/div/div[2]/p/span'
-    data['actions'] = textBlock(monster, actionsTitleXPath, actionsDescriptionXPath).gsub(/[\r\n]/,"")
+    data['actions'] = textBlock(monster, actionsTitleXPath, actionsDescriptionXPath).gsub(/[\r\n]/,'')
 
-    data['legendary_actions_text'] = monster.xpath('//*[@id="app"]/div/div[3]/div/div/div/div[3]/div/div[3]/p[1]').text.gsub(/[\r\n]/,"")
+    data['legendary_actions_text'] = monster.xpath('//*[@id="app"]/div/div[3]/div/div/div/div[3]/div/div[3]/p[1]').text.gsub(/[\r\n]/,'')
     legendaryActionsTitleXPath = '//*[@id="app"]/div/div[3]/div/div/div/div[3]/div/div[3]/p/em/strong'
     legendaryActionsDescriptionXPath = '//*[@id="app"]/div/div[3]/div/div/div/div[3]/div/div[3]/p/span'
-    data['legendary_actions'] = textBlock(monster, legendaryActionsTitleXPath, legendaryActionsDescriptionXPath).gsub(/[\r\n]/,"")
+    data['legendary_actions'] = textBlock(monster, legendaryActionsTitleXPath, legendaryActionsDescriptionXPath).gsub(/[\r\n]/,'')
+
+    if verbose
+        puts data
+    end
+
+    return data
+end
+
+def spellPage(url, verbose=false)
+    data = Hash.new('')
+    spellHtml = HTTParty.get(url)
+    spell = Nokogiri::HTML(spellHtml).xpath('//*[@id="app"]/div/div[3]')
+
+    data['title'] = spell.xpath('//h1//span').text
+
+    level_type = spell.xpath('//div/em').text.split(' ')
+    if level_type[1] == 'cantrip'
+        data['level'] = 0
+        data['type'] = level_type[0]
+    else
+        data['level'] = level_type[0].match(/(\d+)/)[1]
+        data['type'] = level_type[1]
+    end
+
+    data['time'] = spell.xpath('//div/div[1]/div/div/div[2]/span').text
+    data['range'] = spell.xpath('//div/div[1]/div/div/div[3]/span').text
+    data['components'] = spell.xpath('//div/div[1]/div/div/div[4]/span').text
+    data['duration'] = spell.xpath('//div/div[1]/div/div/div[5]/span').text
+
+    data['description'] = spell.xpath('//div/div[1]/div/div/div[6]').text.gsub(/[\r\n]/,'')
 
     if verbose
         puts data
@@ -169,4 +197,31 @@ end
 
 # scrapeMonsters(true, true)
 
+def scrapeSpells(save=false, verbose=false)
+    pages = spellPages(save, verbose)
 
+    if verbose
+        puts "\n\n"
+    end
+
+    CSV.open('spells.csv', 'w') do |csv|
+        pages.each_with_index do |page, index|
+
+            # rate limiting
+            sleep(1)
+
+            if verbose
+                puts "\n\n"
+            end
+            puts "#{index+1}/#{pages.length}"
+
+            s = spellPage(page, verbose)
+
+            if save
+                csv << [s['title'], s['level'], s['type'], s['time'], s['range'], s['components'], s['duration'], s['description']]
+            end
+        end
+    end
+end
+
+# scrapeSpells(true, true)
