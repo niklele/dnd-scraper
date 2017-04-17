@@ -25,13 +25,41 @@ def monsterPages(save=false, verbose=false)
             if save
                 csv << [childName, childLink]
             end
-            # pages.push([childName, childLink])
             pages.push(childLink)
         end
     end
 
     return pages
 end
+
+def spellPages(save=false, verbose=false)
+    spellsHtml = HTTParty.get('http://www.orcpub.com/dungeons-and-dragons/5th-edition/spells')
+    spells = Nokogiri::HTML(spellsHtml)
+    elems = spells.xpath('//*[@id="app"]/div/div[3]/div/div[1]/div/div/a')
+
+    # child pages
+    pages = []
+
+    CSV.open('spell-pages.csv', 'w') do |csv|
+        elems.each do |e|
+            childName = e['href'].split('/').last
+            childLink = "http://www.orcpub.com" + e['href']
+
+            # print and save
+            if verbose
+                puts "#{childName}\t#{childLink}\n"
+            end
+            if save
+                csv << [childName, childLink]
+            end
+            pages.push(childLink)
+        end
+    end
+
+    return pages
+end
+
+# spellPages(true, true)
 
 def textBlockHash(monster, titleXPath, descriptionXPath)
     titles = monster.xpath(titleXPath).map { |e| e.text }
@@ -112,16 +140,6 @@ def monsterPage(url, verbose=false)
     return data
 end
 
-# monsterPage('http://www.orcpub.com/dungeons-and-dragons/5th-edition/monsters/hobgoblin', true)
-
-# monsterPage('http://www.orcpub.com/dungeons-and-dragons/5th-edition/monsters/aboleth', true)
-
-# monsterPage('http://www.orcpub.com/dungeons-and-dragons/5th-edition/monsters/gnome--deep-svirfneblin', true)
-
-# monsterPage('http://www.orcpub.com/dungeons-and-dragons/5th-edition/monsters/veteran', true)
-
-# monsterPage('http://www.orcpub.com/dungeons-and-dragons/5th-edition/monsters/tribal-warrior', true)
-
 def scrapeMonsters(save=false, verbose=false)
     pages = monsterPages(save, verbose)
 
@@ -149,4 +167,6 @@ def scrapeMonsters(save=false, verbose=false)
     end
 end
 
-scrapeMonsters(true, true)
+# scrapeMonsters(true, true)
+
+
